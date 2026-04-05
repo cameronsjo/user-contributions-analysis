@@ -1,15 +1,57 @@
 """Pure Python contribution summarization — no LLM needed for v0.1.0."""
 
 from collections import Counter, defaultdict
+from datetime import datetime
 
 from contributions.models import (
+    CommitContribution,
     Contribution,
     ContributionSummary,
     ContributionType,
+    IssueContribution,
     MonthlyActivity,
+    PullRequestContribution,
+    RepoContributions,
     RepoSummary,
+    ReviewContribution,
     UserProfile,
 )
+
+
+def filter_by_date_range(
+    contributions: list[Contribution],
+    date_from: datetime | None = None,
+    date_to: datetime | None = None,
+) -> list[Contribution]:
+    """Filter contributions to a date range."""
+    filtered = contributions
+    if date_from:
+        filtered = [c for c in filtered if c.timestamp >= date_from]
+    if date_to:
+        filtered = [c for c in filtered if c.timestamp <= date_to]
+    return filtered
+
+
+def build_details(contributions: list[Contribution]) -> list[RepoContributions]:
+    """Group contributions by repo for the detail view."""
+    by_repo: dict[str, RepoContributions] = {}
+
+    for c in sorted(contributions, key=lambda x: x.timestamp, reverse=True):
+        if c.repo_name not in by_repo:
+            by_repo[c.repo_name] = RepoContributions(repo_name=c.repo_name, repo_url=c.repo_url)
+
+        detail = by_repo[c.repo_name]
+        match c:
+            case CommitContribution():
+                detail.commits.append(c)
+            case PullRequestContribution():
+                detail.pull_requests.append(c)
+            case IssueContribution():
+                detail.issues.append(c)
+            case ReviewContribution():
+                detail.reviews.append(c)
+
+    return sorted(by_repo.values(), key=lambda r: r.total, reverse=True)
 
 
 def summarize(
@@ -67,6 +109,9 @@ def summarize(
         reverse=True,
     )[:15]
 
+    # Build detail view
+    details = build_details(contributions)
+
     return ContributionSummary(
         profile=profile,
         total_commits=type_counts.get(ContributionType.COMMIT, 0),
@@ -82,4 +127,5 @@ def summarize(
             "Issues": type_counts.get(ContributionType.ISSUE, 0),
             "Reviews": type_counts.get(ContributionType.REVIEW, 0),
         },
+        details=details,
     )

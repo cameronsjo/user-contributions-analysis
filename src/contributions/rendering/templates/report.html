@@ -352,6 +352,103 @@
         .legend-dot.issues { background: var(--issue-color); }
         .legend-dot.reviews { background: var(--review-color); }
 
+        /* Detail view */
+        .date-range-banner {
+            background: var(--surface);
+            border: 1px solid var(--accent);
+            border-radius: 8px;
+            padding: 0.75rem 1.25rem;
+            margin-bottom: 2rem;
+            font-size: 0.9rem;
+            color: var(--accent);
+            font-weight: 600;
+        }
+
+        .repo-detail {
+            margin-bottom: 1.5rem;
+        }
+
+        .repo-detail-header {
+            display: flex;
+            align-items: baseline;
+            gap: 0.75rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .repo-detail-header a {
+            color: var(--accent);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 1rem;
+        }
+
+        .repo-detail-header a:hover {
+            text-decoration: underline;
+        }
+
+        .repo-detail-header .count {
+            color: var(--text-muted);
+            font-size: 0.8rem;
+        }
+
+        .contribution-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .contribution-list li {
+            display: flex;
+            align-items: baseline;
+            gap: 0.5rem;
+            padding: 0.25rem 0;
+            font-size: 0.85rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .contribution-list li:last-child {
+            border-bottom: none;
+        }
+
+        .contrib-type {
+            display: inline-block;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            text-align: center;
+            font-size: 0.65rem;
+            line-height: 18px;
+            font-weight: 700;
+            color: var(--bg);
+        }
+
+        .contrib-type.commit { background: var(--commit-color); }
+        .contrib-type.pr { background: var(--pr-color); }
+        .contrib-type.issue { background: var(--issue-color); }
+        .contrib-type.review { background: var(--review-color); }
+
+        .contrib-message {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .contrib-date {
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            white-space: nowrap;
+        }
+
+        .contrib-state {
+            font-size: 0.7rem;
+            padding: 0.1rem 0.4rem;
+            border-radius: 999px;
+            border: 1px solid var(--border);
+            white-space: nowrap;
+        }
+
         .footer {
             text-align: center;
             color: var(--text-muted);
@@ -393,6 +490,18 @@
                 </div>
             </div>
         </header>
+
+        {% if summary.date_from or summary.date_to %}
+        <div class="date-range-banner">
+            {% if summary.date_from and summary.date_to %}
+            Showing contributions from {{ summary.date_from }} to {{ summary.date_to }}
+            {% elif summary.date_from %}
+            Showing contributions from {{ summary.date_from }} to present
+            {% elif summary.date_to %}
+            Showing contributions up to {{ summary.date_to }}
+            {% endif %}
+        </div>
+        {% endif %}
 
         <section>
             <div class="stats-grid">
@@ -539,6 +648,59 @@
                 <span class="lang-tag">{{ lang }}<span class="count">({{ count }})</span></span>
                 {% endfor %}
             </div>
+        </section>
+        {% endif %}
+
+        {% if summary.details %}
+        <section>
+            <h2>What Was Built</h2>
+            {% for repo in summary.details %}
+            <div class="repo-detail">
+                <div class="repo-detail-header">
+                    <a href="{{ repo.repo_url }}" target="_blank" rel="noopener">{{ repo.repo_name }}</a>
+                    <span class="count">{{ repo.total }} contributions</span>
+                </div>
+                <ul class="contribution-list">
+                    {% for pr in repo.pull_requests %}
+                    <li>
+                        <span class="contrib-type pr">PR</span>
+                        <span class="contrib-message">#{{ pr.number }} {{ pr.title }}</span>
+                        <span class="contrib-state">{{ pr.state }}</span>
+                        <span class="contrib-date">{{ pr.timestamp.strftime('%b %d') }}</span>
+                    </li>
+                    {% endfor %}
+                    {% for issue in repo.issues %}
+                    <li>
+                        <span class="contrib-type issue">I</span>
+                        <span class="contrib-message">#{{ issue.number }} {{ issue.title }}</span>
+                        <span class="contrib-state">{{ issue.state }}</span>
+                        <span class="contrib-date">{{ issue.timestamp.strftime('%b %d') }}</span>
+                    </li>
+                    {% endfor %}
+                    {% for review in repo.reviews %}
+                    <li>
+                        <span class="contrib-type review">R</span>
+                        <span class="contrib-message">Review on #{{ review.pr_number }}: {{ review.pr_title }}</span>
+                        <span class="contrib-state">{{ review.state }}</span>
+                        <span class="contrib-date">{{ review.timestamp.strftime('%b %d') }}</span>
+                    </li>
+                    {% endfor %}
+                    {% for commit in repo.commits[:20] %}
+                    <li>
+                        <span class="contrib-type commit">C</span>
+                        <span class="contrib-message">{{ commit.message.split('\n')[0] }}</span>
+                        <span class="contrib-date">{{ commit.timestamp.strftime('%b %d') }}</span>
+                    </li>
+                    {% endfor %}
+                    {% if repo.commits | length > 20 %}
+                    <li>
+                        <span class="contrib-type commit">C</span>
+                        <span class="contrib-message" style="color: var(--text-muted)">...and {{ repo.commits | length - 20 }} more commits</span>
+                    </li>
+                    {% endif %}
+                </ul>
+            </div>
+            {% endfor %}
         </section>
         {% endif %}
 

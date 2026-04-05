@@ -109,6 +109,21 @@ class CalendarDay(BaseModel):
     count: int = 0
 
 
+class RepoContributions(BaseModel):
+    """Detailed contributions for a single repo — for the detail view."""
+
+    repo_name: str
+    repo_url: str
+    commits: list["CommitContribution"] = Field(default_factory=list)
+    pull_requests: list["PullRequestContribution"] = Field(default_factory=list)
+    issues: list["IssueContribution"] = Field(default_factory=list)
+    reviews: list["ReviewContribution"] = Field(default_factory=list)
+
+    @property
+    def total(self) -> int:
+        return len(self.commits) + len(self.pull_requests) + len(self.issues) + len(self.reviews)
+
+
 class ContributionSummary(BaseModel):
     """Aggregated summary of all contributions — ready for rendering."""
 
@@ -125,6 +140,9 @@ class ContributionSummary(BaseModel):
     calendar: list[CalendarDay] = Field(default_factory=list)  # daily activity heatmap
     narrative: str | None = None  # AI-generated narrative summary
     providers: list[str] = Field(default_factory=list)  # which providers contributed data
+    details: list[RepoContributions] = Field(default_factory=list)  # per-repo detail view
+    date_from: str | None = None  # time range label
+    date_to: str | None = None
 
     @property
     def total_contributions(self) -> int:
