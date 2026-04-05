@@ -19,8 +19,8 @@ def test_build_prompt_includes_profile(sample_summary):
 
 def test_build_prompt_includes_stats(sample_summary):
     prompt = _build_prompt(sample_summary)
-    assert "Commits:" in prompt
-    assert "Pull Requests:" in prompt
+    assert "commits" in prompt
+    assert "PRs" in prompt
 
 
 def test_build_prompt_includes_repos(sample_summary):
