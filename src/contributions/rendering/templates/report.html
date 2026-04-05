@@ -530,13 +530,11 @@
             </div>
         </section>
 
-        {% if summary.narrative %}
+        {% if narrative_html %}
         <section>
             <h2>Summary</h2>
             <div class="narrative">
-                {% for paragraph in summary.narrative.split('\n\n') %}
-                <p>{{ paragraph }}</p>
-                {% endfor %}
+                {{ narrative_html }}
             </div>
         </section>
         {% endif %}
