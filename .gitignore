@@ -219,3 +219,8 @@ __marimo__/
 .dolt/
 *.db
 .beads-credential-key
+
+# Project-specific
+output/
+.env
+
