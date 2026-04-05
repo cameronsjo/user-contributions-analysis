@@ -19,6 +19,11 @@
             --pr-color: #58a6ff;
             --issue-color: #d2a8ff;
             --review-color: #f78166;
+            --cal-empty: #161b22;
+            --cal-l1: #0e4429;
+            --cal-l2: #006d32;
+            --cal-l3: #26a641;
+            --cal-l4: #39d353;
         }
 
         @media (prefers-color-scheme: light) {
@@ -36,6 +41,11 @@
                 --pr-color: #0969da;
                 --issue-color: #8250df;
                 --review-color: #cf222e;
+                --cal-empty: #ebedf0;
+                --cal-l1: #9be9a8;
+                --cal-l2: #40c463;
+                --cal-l3: #30a14e;
+                --cal-l4: #216e39;
             }
         }
 
@@ -91,15 +101,26 @@
 
         .profile-meta {
             display: flex;
-            gap: 1.5rem;
+            flex-wrap: wrap;
+            gap: 1rem;
             margin-top: 0.5rem;
             color: var(--text-muted);
             font-size: 0.875rem;
         }
 
+        .provider-badge {
+            display: inline-block;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            padding: 0.1rem 0.5rem;
+            font-size: 0.75rem;
+            margin-left: 0.5rem;
+        }
+
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
             gap: 1rem;
             margin-bottom: 2rem;
         }
@@ -128,6 +149,7 @@
         .stat-card.prs .value { color: var(--pr-color); }
         .stat-card.issues .value { color: var(--issue-color); }
         .stat-card.reviews .value { color: var(--review-color); }
+        .stat-card.private .value { color: var(--text-muted); }
 
         section {
             margin-bottom: 2rem;
@@ -141,6 +163,69 @@
             border-bottom: 1px solid var(--border);
         }
 
+        /* Narrative */
+        .narrative {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            line-height: 1.7;
+        }
+
+        .narrative p {
+            margin-bottom: 1rem;
+        }
+
+        .narrative p:last-child {
+            margin-bottom: 0;
+        }
+
+        /* Contribution calendar heatmap */
+        .calendar-container {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.25rem;
+            overflow-x: auto;
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-rows: repeat(7, 12px);
+            grid-auto-flow: column;
+            grid-auto-columns: 12px;
+            gap: 3px;
+        }
+
+        .cal-day {
+            width: 12px;
+            height: 12px;
+            border-radius: 2px;
+            background: var(--cal-empty);
+        }
+
+        .cal-day.l1 { background: var(--cal-l1); }
+        .cal-day.l2 { background: var(--cal-l2); }
+        .cal-day.l3 { background: var(--cal-l3); }
+        .cal-day.l4 { background: var(--cal-l4); }
+
+        .cal-legend {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            margin-top: 0.5rem;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            justify-content: flex-end;
+        }
+
+        .cal-legend-box {
+            width: 12px;
+            height: 12px;
+            border-radius: 2px;
+        }
+
+        /* Repos table */
         .repos-table {
             width: 100%;
             border-collapse: collapse;
@@ -174,6 +259,7 @@
             font-variant-numeric: tabular-nums;
         }
 
+        /* Activity bar chart */
         .activity-chart {
             background: var(--surface);
             border: 1px solid var(--border);
@@ -287,6 +373,9 @@
                     <a href="{{ profile.profile_url }}" target="_blank" rel="noopener">
                         {{ profile.display_name or profile.username }}
                     </a>
+                    {% for provider in summary.providers %}
+                    <span class="provider-badge">{{ provider }}</span>
+                    {% endfor %}
                 </h1>
                 {% if profile.display_name %}
                 <div class="bio">@{{ profile.username }}</div>
@@ -323,8 +412,58 @@
                     <div class="value">{{ summary.total_reviews }}</div>
                     <div class="label">Reviews</div>
                 </div>
+                {% if summary.private_contributions > 0 %}
+                <div class="stat-card private">
+                    <div class="value">{{ summary.private_contributions }}</div>
+                    <div class="label">Private</div>
+                </div>
+                {% endif %}
             </div>
         </section>
+
+        {% if summary.narrative %}
+        <section>
+            <h2>Summary</h2>
+            <div class="narrative">
+                {% for paragraph in summary.narrative.split('\n\n') %}
+                <p>{{ paragraph }}</p>
+                {% endfor %}
+            </div>
+        </section>
+        {% endif %}
+
+        {% if summary.calendar %}
+        <section>
+            <h2>Contribution Calendar</h2>
+            <div class="calendar-container">
+                <div class="calendar-grid">
+                    {% set max_count = summary.calendar | map(attribute='count') | max %}
+                    {% for day in summary.calendar %}
+                    {% if day.count == 0 %}
+                    <div class="cal-day" title="{{ day.date }}: 0 contributions"></div>
+                    {% elif day.count <= (max_count * 0.25) | int or day.count <= 1 %}
+                    <div class="cal-day l1" title="{{ day.date }}: {{ day.count }} contributions"></div>
+                    {% elif day.count <= (max_count * 0.5) | int %}
+                    <div class="cal-day l2" title="{{ day.date }}: {{ day.count }} contributions"></div>
+                    {% elif day.count <= (max_count * 0.75) | int %}
+                    <div class="cal-day l3" title="{{ day.date }}: {{ day.count }} contributions"></div>
+                    {% else %}
+                    <div class="cal-day l4" title="{{ day.date }}: {{ day.count }} contributions"></div>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+                <div class="cal-legend">
+                    <span>Less</span>
+                    <div class="cal-legend-box" style="background: var(--cal-empty)"></div>
+                    <div class="cal-legend-box" style="background: var(--cal-l1)"></div>
+                    <div class="cal-legend-box" style="background: var(--cal-l2)"></div>
+                    <div class="cal-legend-box" style="background: var(--cal-l3)"></div>
+                    <div class="cal-legend-box" style="background: var(--cal-l4)"></div>
+                    <span>More</span>
+                </div>
+            </div>
+        </section>
+        {% endif %}
 
         {% if summary.monthly_activity %}
         <section>
@@ -380,7 +519,7 @@
                     {% for repo in summary.top_repos %}
                     <tr>
                         <td><a href="{{ repo.url }}" target="_blank" rel="noopener">{{ repo.name }}</a></td>
-                        <td>{{ repo.language or '—' }}</td>
+                        <td>{{ repo.language or '&#x2014;' }}</td>
                         <td class="num">{{ repo.commits }}</td>
                         <td class="num">{{ repo.pull_requests }}</td>
                         <td class="num">{{ repo.issues }}</td>
@@ -405,6 +544,9 @@
 
         <footer class="footer">
             Generated by <strong>contributions</strong> v0.1.0
+            {% if summary.providers %}
+            &middot; Data from {{ summary.providers | join(', ') }}
+            {% endif %}
         </footer>
     </div>
 </body>

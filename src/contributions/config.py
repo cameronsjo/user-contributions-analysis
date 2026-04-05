@@ -9,3 +9,4 @@ class Settings(BaseSettings):
     github_token: str | None = None
     gitea_url: str | None = None
     gitea_token: str | None = None
+    anthropic_api_key: str | None = None

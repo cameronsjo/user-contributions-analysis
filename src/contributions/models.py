@@ -102,6 +102,13 @@ class MonthlyActivity(BaseModel):
         return self.commits + self.pull_requests + self.issues + self.reviews
 
 
+class CalendarDay(BaseModel):
+    """A single day in the contribution calendar (from GraphQL)."""
+
+    date: str  # YYYY-MM-DD
+    count: int = 0
+
+
 class ContributionSummary(BaseModel):
     """Aggregated summary of all contributions — ready for rendering."""
 
@@ -110,10 +117,14 @@ class ContributionSummary(BaseModel):
     total_pull_requests: int = 0
     total_issues: int = 0
     total_reviews: int = 0
+    private_contributions: int = 0
     top_repos: list[RepoSummary] = Field(default_factory=list)
     monthly_activity: list[MonthlyActivity] = Field(default_factory=list)
     languages: dict[str, int] = Field(default_factory=dict)  # language -> repo count
     contribution_types: dict[str, int] = Field(default_factory=dict)  # type -> count
+    calendar: list[CalendarDay] = Field(default_factory=list)  # daily activity heatmap
+    narrative: str | None = None  # AI-generated narrative summary
+    providers: list[str] = Field(default_factory=list)  # which providers contributed data
 
     @property
     def total_contributions(self) -> int:
