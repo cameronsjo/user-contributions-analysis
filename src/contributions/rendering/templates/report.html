@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ profile.username }} — Contribution Report</title>
+    <style>
+        :root {
+            --bg: #0d1117;
+            --surface: #161b22;
+            --border: #30363d;
+            --text: #e6edf3;
+            --text-muted: #8b949e;
+            --accent: #58a6ff;
+            --accent-2: #3fb950;
+            --accent-3: #d2a8ff;
+            --accent-4: #f78166;
+            --commit-color: #3fb950;
+            --pr-color: #58a6ff;
+            --issue-color: #d2a8ff;
+            --review-color: #f78166;
+        }
+
+        @media (prefers-color-scheme: light) {
+            :root {
+                --bg: #ffffff;
+                --surface: #f6f8fa;
+                --border: #d0d7de;
+                --text: #1f2328;
+                --text-muted: #656d76;
+                --accent: #0969da;
+                --accent-2: #1a7f37;
+                --accent-3: #8250df;
+                --accent-4: #cf222e;
+                --commit-color: #1a7f37;
+                --pr-color: #0969da;
+                --issue-color: #8250df;
+                --review-color: #cf222e;
+            }
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            padding: 2rem 1rem;
+        }
+
+        .container {
+            max-width: 960px;
+            margin: 0 auto;
+        }
+
+        .profile-header {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            border: 2px solid var(--border);
+        }
+
+        .profile-info h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .profile-info h1 a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+
+        .profile-info h1 a:hover {
+            text-decoration: underline;
+        }
+
+        .profile-info .bio {
+            color: var(--text-muted);
+            margin-top: 0.25rem;
+        }
+
+        .profile-meta {
+            display: flex;
+            gap: 1.5rem;
+            margin-top: 0.5rem;
+            color: var(--text-muted);
+            font-size: 0.875rem;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.25rem;
+            text-align: center;
+        }
+
+        .stat-card .value {
+            font-size: 2rem;
+            font-weight: 700;
+            line-height: 1.2;
+        }
+
+        .stat-card .label {
+            color: var(--text-muted);
+            font-size: 0.875rem;
+            margin-top: 0.25rem;
+        }
+
+        .stat-card.commits .value { color: var(--commit-color); }
+        .stat-card.prs .value { color: var(--pr-color); }
+        .stat-card.issues .value { color: var(--issue-color); }
+        .stat-card.reviews .value { color: var(--review-color); }
+
+        section {
+            margin-bottom: 2rem;
+        }
+
+        section h2 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .repos-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.875rem;
+        }
+
+        .repos-table th {
+            text-align: left;
+            padding: 0.5rem 0.75rem;
+            border-bottom: 2px solid var(--border);
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        .repos-table td {
+            padding: 0.5rem 0.75rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .repos-table a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+
+        .repos-table a:hover {
+            text-decoration: underline;
+        }
+
+        .repos-table .num {
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .activity-chart {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.25rem;
+            overflow-x: auto;
+        }
+
+        .bar-chart {
+            display: flex;
+            align-items: flex-end;
+            gap: 4px;
+            height: 200px;
+            padding-top: 1rem;
+        }
+
+        .bar-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex: 1;
+            min-width: 40px;
+        }
+
+        .bar-stack {
+            display: flex;
+            flex-direction: column-reverse;
+            width: 100%;
+            max-width: 32px;
+        }
+
+        .bar-segment {
+            width: 100%;
+            min-height: 0;
+            border-radius: 2px;
+        }
+
+        .bar-segment.commits { background: var(--commit-color); }
+        .bar-segment.prs { background: var(--pr-color); }
+        .bar-segment.issues { background: var(--issue-color); }
+        .bar-segment.reviews { background: var(--review-color); }
+
+        .bar-label {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            margin-top: 0.5rem;
+            white-space: nowrap;
+        }
+
+        .languages-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .lang-tag {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            padding: 0.25rem 0.75rem;
+            font-size: 0.8rem;
+        }
+
+        .lang-tag .count {
+            color: var(--text-muted);
+            margin-left: 0.25rem;
+        }
+
+        .legend {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 0.75rem;
+            font-size: 0.8rem;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+        }
+
+        .legend-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 2px;
+        }
+
+        .legend-dot.commits { background: var(--commit-color); }
+        .legend-dot.prs { background: var(--pr-color); }
+        .legend-dot.issues { background: var(--issue-color); }
+        .legend-dot.reviews { background: var(--review-color); }
+
+        .footer {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--border);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="profile-header">
+            {% if profile.avatar_url %}
+            <img class="avatar" src="{{ profile.avatar_url }}" alt="{{ profile.username }}">
+            {% endif %}
+            <div class="profile-info">
+                <h1>
+                    <a href="{{ profile.profile_url }}" target="_blank" rel="noopener">
+                        {{ profile.display_name or profile.username }}
+                    </a>
+                </h1>
+                {% if profile.display_name %}
+                <div class="bio">@{{ profile.username }}</div>
+                {% endif %}
+                {% if profile.bio %}
+                <div class="bio">{{ profile.bio }}</div>
+                {% endif %}
+                <div class="profile-meta">
+                    <span>{{ profile.public_repos }} repos</span>
+                    <span>{{ profile.followers }} followers</span>
+                    <span>{{ profile.following }} following</span>
+                    {% if profile.created_at %}
+                    <span>Joined {{ profile.created_at.strftime('%b %Y') }}</span>
+                    {% endif %}
+                </div>
+            </div>
+        </header>
+
+        <section>
+            <div class="stats-grid">
+                <div class="stat-card commits">
+                    <div class="value">{{ summary.total_commits }}</div>
+                    <div class="label">Commits</div>
+                </div>
+                <div class="stat-card prs">
+                    <div class="value">{{ summary.total_pull_requests }}</div>
+                    <div class="label">Pull Requests</div>
+                </div>
+                <div class="stat-card issues">
+                    <div class="value">{{ summary.total_issues }}</div>
+                    <div class="label">Issues</div>
+                </div>
+                <div class="stat-card reviews">
+                    <div class="value">{{ summary.total_reviews }}</div>
+                    <div class="label">Reviews</div>
+                </div>
+            </div>
+        </section>
+
+        {% if summary.monthly_activity %}
+        <section>
+            <h2>Activity Timeline</h2>
+            <div class="activity-chart">
+                <div class="legend">
+                    <div class="legend-item"><span class="legend-dot commits"></span> Commits</div>
+                    <div class="legend-item"><span class="legend-dot prs"></span> PRs</div>
+                    <div class="legend-item"><span class="legend-dot issues"></span> Issues</div>
+                    <div class="legend-item"><span class="legend-dot reviews"></span> Reviews</div>
+                </div>
+                {% set max_total = summary.monthly_activity | map(attribute='total') | max %}
+                <div class="bar-chart">
+                    {% for month in summary.monthly_activity %}
+                    <div class="bar-group">
+                        <div class="bar-stack">
+                            {% if month.commits > 0 %}
+                            <div class="bar-segment commits" style="height: {{ (month.commits / max_total * 180) | round | int }}px" title="{{ month.commits }} commits"></div>
+                            {% endif %}
+                            {% if month.pull_requests > 0 %}
+                            <div class="bar-segment prs" style="height: {{ (month.pull_requests / max_total * 180) | round | int }}px" title="{{ month.pull_requests }} PRs"></div>
+                            {% endif %}
+                            {% if month.issues > 0 %}
+                            <div class="bar-segment issues" style="height: {{ (month.issues / max_total * 180) | round | int }}px" title="{{ month.issues }} issues"></div>
+                            {% endif %}
+                            {% if month.reviews > 0 %}
+                            <div class="bar-segment reviews" style="height: {{ (month.reviews / max_total * 180) | round | int }}px" title="{{ month.reviews }} reviews"></div>
+                            {% endif %}
+                        </div>
+                        <div class="bar-label">{{ month.month[5:] }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </section>
+        {% endif %}
+
+        {% if summary.top_repos %}
+        <section>
+            <h2>Top Repositories</h2>
+            <table class="repos-table">
+                <thead>
+                    <tr>
+                        <th>Repository</th>
+                        <th>Language</th>
+                        <th class="num">Commits</th>
+                        <th class="num">PRs</th>
+                        <th class="num">Issues</th>
+                        <th class="num">Stars</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for repo in summary.top_repos %}
+                    <tr>
+                        <td><a href="{{ repo.url }}" target="_blank" rel="noopener">{{ repo.name }}</a></td>
+                        <td>{{ repo.language or '—' }}</td>
+                        <td class="num">{{ repo.commits }}</td>
+                        <td class="num">{{ repo.pull_requests }}</td>
+                        <td class="num">{{ repo.issues }}</td>
+                        <td class="num">{{ repo.stars }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </section>
+        {% endif %}
+
+        {% if summary.languages %}
+        <section>
+            <h2>Languages</h2>
+            <div class="languages-grid">
+                {% for lang, count in summary.languages | dictsort(by='value', reverse=true) %}
+                <span class="lang-tag">{{ lang }}<span class="count">({{ count }})</span></span>
+                {% endfor %}
+            </div>
+        </section>
+        {% endif %}
+
+        <footer class="footer">
+            Generated by <strong>contributions</strong> v0.1.0
+        </footer>
+    </div>
+</body>
+</html>
