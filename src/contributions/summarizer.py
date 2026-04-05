@@ -41,12 +41,28 @@ def summarize(
         key=lambda m: m.month,
     )
 
+    # Count contributions per repo
+    repo_map: dict[str, RepoSummary] = {r.name: r.model_copy() for r in repos}
+    for c in contributions:
+        if c.repo_name in repo_map:
+            r = repo_map[c.repo_name]
+            match c.type:
+                case ContributionType.COMMIT:
+                    r.commits += 1
+                case ContributionType.PULL_REQUEST:
+                    r.pull_requests += 1
+                case ContributionType.ISSUE:
+                    r.issues += 1
+                case ContributionType.REVIEW:
+                    r.reviews += 1
+
     # Language breakdown from repos
     languages: dict[str, int] = Counter(r.language for r in repos if r.language)
 
     # Top repos by total activity
+    enriched_repos = list(repo_map.values())
     top_repos = sorted(
-        [r for r in repos if (r.commits + r.pull_requests + r.issues + r.reviews) > 0],
+        [r for r in enriched_repos if (r.commits + r.pull_requests + r.issues + r.reviews) > 0],
         key=lambda r: r.commits + r.pull_requests + r.issues + r.reviews + r.stars,
         reverse=True,
     )[:15]
