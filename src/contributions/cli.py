@@ -125,17 +125,51 @@ async def _generate(
             all_contributions.extend(gh_contributions)
             providers_used.append("github")
 
-        # GitHub GraphQL (if token available)
-        if settings.github_token:
-            progress.update(task, description="Fetching GitHub GraphQL data...")
-            graphql_data = await fetch_graphql_contributions(
-                settings.github_token, username, from_date=date_from, to_date=date_to
-            )
+            # GitHub GraphQL (if token available)
+            graphql_data = None
+            if settings.github_token:
+                progress.update(task, description="Fetching GitHub GraphQL data...")
+                graphql_data = await fetch_graphql_contributions(
+                    settings.github_token, username, from_date=date_from, to_date=date_to
+                )
+                if graphql_data:
+                    private_contributions = graphql_data.private_contributions
+                    calendar = [CalendarDay(date=d.date, count=d.count) for d in graphql_data.calendar_days]
+                    _enrich_repos_from_graphql(all_repos, graphql_data)
+                    progress.update(task, description=f"GraphQL: {graphql_data.calendar_total} contributions this year")
+
+            # Use GraphQL to discover repos we contributed to but REST missed
             if graphql_data:
-                private_contributions = graphql_data.private_contributions
-                calendar = [CalendarDay(date=d.date, count=d.count) for d in graphql_data.calendar_days]
-                _enrich_repos_from_graphql(all_repos, graphql_data)
-                progress.update(task, description=f"GraphQL: {graphql_data.calendar_total} contributions this year")
+                graphql_repos = set()
+                for repo_map in (
+                    graphql_data.commit_repos,
+                    graphql_data.pr_repos,
+                    graphql_data.issue_repos,
+                    graphql_data.review_repos,
+                ):
+                    graphql_repos.update(repo_map.keys())
+
+                # Find repos GraphQL knows about but REST didn't fetch commits from
+                existing_repos = {c.repo_name for c in all_contributions}
+                missing_repos = graphql_repos - existing_repos
+                if missing_repos:
+                    progress.update(
+                        task,
+                        description=f"Fetching commits from {len(missing_repos)} additional repos...",
+                    )
+                    seen_shas = {c.sha for c in all_contributions if hasattr(c, "sha")}
+                    for repo_name in missing_repos:
+                        parts = repo_name.split("/")
+                        if len(parts) != 2:
+                            continue
+                        try:
+                            commits = await github.get_repo_commits(parts[0], parts[1], username)
+                            for commit in commits:
+                                if commit.sha not in seen_shas:
+                                    all_contributions.append(commit)
+                                    seen_shas.add(commit.sha)
+                        except Exception:
+                            pass  # skip repos we can't access
 
         # Gitea (if configured)
         if gitea_base:
